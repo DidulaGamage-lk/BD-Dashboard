@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Birthday Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#181622;
+    --surface:#221F30;
+    --surface-2:#2A2740;
+    --cream:#F6F1E7;
+    --muted:#9C97B5;
+    --gold:#F2B84B;
+    --coral:#FF6F7D;
+    --mint:#63C9A6;
+    --line:rgba(246,241,231,0.10);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--cream);
+    font-family:'Space Grotesk', sans-serif;
+    padding:0;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:1080px;
+    margin:0 auto;
+    padding:36px 24px 80px;
+  }
+
+  /* HEADER */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:32px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:24px;
+  }
+  .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:0.18em;
+    font-size:11px;
+    color:var(--gold);
+    font-weight:600;
+    margin:0 0 8px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:38px;
+    margin:0;
+    line-height:1.05;
+  }
+  .today{
+    text-align:right;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .today strong{
+    display:block;
+    color:var(--cream);
+    font-size:15px;
+    font-weight:600;
+  }
+  .notify-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:999px;
+    padding:8px 16px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  .notify-btn:hover{ border-color:var(--gold); }
+  .notify-btn.on{
+    background:rgba(99,201,166,0.15);
+    border-color:var(--mint);
+    color:var(--mint);
+  }
+  .notify-dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--muted);
+    flex-shrink:0;
+  }
+  .notify-btn.on .notify-dot{ background:var(--mint); }
+
+  /* HERO / NEXT BIRTHDAY */
+  .hero{
+    background:linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px;
+    margin-bottom:40px;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    gap:32px;
+    flex-wrap:wrap;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    top:-60px; right:-60px;
+    width:220px; height:220px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(242,184,75,0.18), transparent 70%);
+  }
+  .hero-count{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:76px;
+    line-height:1;
+    color:var(--gold);
+    min-width:130px;
+    z-index:1;
+  }
+  .hero-count sub{
+    display:block;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-top:6px;
+  }
+  .hero-info{ z-index:1; }
+  .hero-info .label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+    color:var(--coral);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .hero-info .name{
+    font-family:'Fraunces', serif;
+    font-size:26px;
+    font-weight:600;
+  }
+  .hero-info .date{
+    color:var(--muted);
+    font-size:14px;
+    margin-top:4px;
+  }
+  .hero-empty{
+    color:var(--muted);
+    font-size:15px;
+    z-index:1;
+  }
+
+  /* ADD FORM */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+    margin-bottom:40px;
+  }
+  .panel h2{
+    font-family:'Fraunces', serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0 0 16px;
+  }
+  .form-row{
+    display:grid;
+    grid-template-columns:1.6fr 1fr 0.8fr 1.4fr auto;
+    gap:12px;
+    align-items:end;
+  }
+  @media (max-width:760px){
+    .form-row{grid-template-columns:1fr 1fr; }
+  }
+  .field label{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--ink);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:10px;
+    padding:10px 12px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+  }
+  .field input:focus, .field select:focus{
+    outline:2px solid var(--gold);
+    outline-offset:1px;
+  }
+  .btn-add{
+    background:var(--gold);
+    color:var(--ink);
+    border:none;
+    border-radius:10px;
+    padding:10px 20px;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    white-space:nowrap;
+    height:41px;
+  }
+  .btn-add:hover{ filter:brightness(1.08); }
+  .form-msg{
+    font-size:12px;
+    color:var(--coral);
+    margin-top:10px;
+    min-height:14px;
+  }
+  .form-msg.success{ color:var(--mint); }
+  .import-hint{
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.5;
+    margin:0 0 16px;
+  }
+  .import-hint strong{ color:var(--cream); }
+  .import-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .file-btn{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--cream);
+    border-radius:10px;
+    padding:10px 18px;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .file-btn:hover{ border-color:var(--gold); }
+  .file-name{
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  /* MONTH GRID */
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-title .count-pill{
+    background:var(--surface-2);
+    color:var(--muted);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    padding:3px 10px;
+    border-radius:999px;
+  }
+  .month-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+    gap:16px;
+  }
+  .month-tile{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:0;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .month-tile.current{
+    border-color:var(--gold);
+    box-shadow:0 0 0 1px var(--gold);
+  }
+  .month-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .month-head .m-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16px;
+  }
+  .month-head .m-tag{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    background:var(--gold);
+    color:var(--ink);
+    padding:2px 8px;
+    border-radius:999px;
+    font-weight:700;
+  }
+  .month-bar{
+    height:4px;
+    width:100%;
+  }
+  .month-body{
+    padding:10px 16px 16px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-height:52px;
+  }
+  .b-entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    background:var(--surface-2);
+    border-radius:8px;
+    font-size:13.5px;
+  }
+  .b-entry.today-entry{
+    background:rgba(242,184,75,0.16);
+    border:1px solid var(--gold);
+  }
+  .b-entry .b-name{
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .b-entry .b-meta{
+    color:var(--muted);
+    font-size:11.5px;
+    flex-shrink:0;
+  }
+  .b-entry .b-del{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:15px;
+    line-height:1;
+    padding:2px 4px;
+    flex-shrink:0;
+  }
+  .b-entry .b-del:hover{ color:var(--coral); }
+  .m-empty{
+    color:var(--muted);
+    font-size:12.5px;
+    font-style:italic;
+    padding:6px 2px;
+  }
+
+  .loading, .empty-state{
+    text-align:center;
+    color:var(--muted);
+    padding:40px;
+    font-size:14px;
+  }
+
+  ::selection{ background:var(--gold); color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Birthday Dashboard</p>
+      <h1>Never miss a birthday again</h1>
+    </div>
+    <div class="today">
+      Today
+      <strong id="todayLabel">—</strong>
+      <button class="notify-btn" id="notifyBtn"><span class="notify-dot"></span><span id="notifyLabel">Enable notifications</span></button>
+    </div>
+  </header>
+
+  <div class="hero" id="hero">
+    <div class="loading">Loading your birthday list…</div>
+  </div>
+
+  <div class="panel">
+    <h2>Add a birthday</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="fName">Name</label>
+        <input id="fName" type="text" placeholder="e.g. Priya Fernando" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="fMonth">Month</label>
+        <select id="fMonth"></select>
+      </div>
+      <div class="field">
+        <label for="fDay">Day</label>
+        <input id="fDay" type="number" min="1" max="31" placeholder="15">
+      </div>
+      <div class="field">
+        <label for="fNote">Note (optional)</label>
+        <input id="fNote" type="text" placeholder="e.g. Sister, loves chocolate cake" maxlength="80">
+      </div>
+      <button class="btn-add" id="addBtn">Add birthday</button>
+    </div>
+    <div class="form-msg" id="formMsg"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Import from Excel or CSV</h2>
+    <p class="import-hint">Upload a .xlsx or .csv file with columns for <strong>Name</strong>, <strong>Month</strong>, and <strong>Day</strong> (or a single <strong>Birthday</strong>/<strong>Date</strong> column). A <strong>Note</strong> column is optional. Header names are matched loosely, so "DOB", "Birth Month", etc. also work.</p>
+    <div class="import-row">
+      <label class="file-btn" for="fileInput">Choose file</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+      <span id="fileName" class="file-name">No file selected</span>
+    </div>
+    <div class="form-msg" id="importMsg"></div>
+  </div>
+
+  <p class="section-title">Full year <span class="count-pill" id="totalPill">0 birthdays</span></p>
+  <div class="month-grid" id="monthGrid"></div>
+
+</div>
+
+<script>
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+// A 12-tone accent wheel, one hue per month
+const MONTH_COLORS = ["#F2B84B","#FF6F7D","#C97BE0","#63C9A6","#5AA9E6","#F2955A",
+                       "#E06B9E","#8FD14F","#4FD1C5","#F0D25A","#7A8CF0","#F27D5E"];
+
+const STORAGE_KEY = 'birthday-entries';
+let entries = [];
+
+const today = new Date();
+const todayMonth = today.getMonth();
+const todayDay = today.getDate();
+
+document.getElementById('todayLabel').textContent =
+  today.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+
+// populate month select
+const monthSelect = document.getElementById('fMonth');
+MONTH_NAMES.forEach((m,i)=>{
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = m;
+  if(i === todayMonth) opt.selected = true;
+  monthSelect.appendChild(opt);
+});
+
+function daysInMonth(monthIndex){
+  // use a non-leap reference year fallback of 2001, but allow Feb 29
+  return new Date(2024, monthIndex+1, 0).getDate();
+}
+
+function uid(){
+  return 'b_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+
+async function loadEntries(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    entries = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    entries = [];
+  }
+  render();
+}
+
+async function saveEntries(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(entries), false);
+  }catch(e){
+    console.error('Could not save birthdays', e);
+  }
+}
+
+function nextOccurrence(month, day){
+  // returns a Date object for the next occurrence of this month/day from today
+  let year = today.getFullYear();
+  let candidate = new Date(year, month, day);
+  // normalize in case day overflowed (e.g., Feb 30 -> March)
+  if(candidate.getMonth() !== month){
+    candidate = new Date(year, month+1, 0); // clamp to last day of month
+  }
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if(candidate < todayMid){
+    candidate = new Date(year+1, month, day);
+    if(candidate.getMonth() !== month){
+      candidate = new Date(year+1, month+1, 0);
+    }
+  }
+  return candidate;
+}
+
+function daysUntil(date){
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diff = Math.round((date - todayMid) / 86400000);
+  return diff;
+}
+
+function renderHero(){
+  const hero = document.getElementById('hero');
+  if(entries.length === 0){
+    hero.innerHTML = `<div class="hero-empty">No birthdays saved yet add one below to start tracking.</div>`;
+    return;
+  }
+  const withNext = entries.map(e => ({...e, next: nextOccurrence(e.month, e.day)}));
+  withNext.sort((a,b)=> a.next - b.next);
+  const soonest = withNext[0];
+  const diff = daysUntil(soonest.next);
+  let countLabel, subLabel;
+  if(diff === 0){ countLabel = "🎉"; subLabel = "today"; }
+  else if(diff === 1){ countLabel = "1"; subLabel = "day away"; }
+  else { countLabel = String(diff); subLabel = "days away"; }
+
+  hero.innerHTML = `
+    <div class="hero-count">${countLabel}<sub>${subLabel}</sub></div>
+    <div class="hero-info">
+      <div class="label">Next up</div>
+      <div class="name">${escapeHtml(soonest.name)}</div>
+      <div class="date">${MONTH_NAMES[soonest.month]} ${soonest.day}${soonest.note ? ' · ' + escapeHtml(soonest.note) : ''}</div>
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderMonths(){
+  const grid = document.getElementById('monthGrid');
+  grid.innerHTML = '';
+  document.getElementById('totalPill').textContent =
+    entries.length + (entries.length === 1 ? ' birthday' : ' birthdays');
+
+  MONTH_NAMES.forEach((mName, mIndex)=>{
+    const tile = document.createElement('div');
+    tile.className = 'month-tile' + (mIndex === todayMonth ? ' current' : '');
+
+    const monthEntries = entries
+      .filter(e => e.month === mIndex)
+      .sort((a,b)=> a.day - b.day);
+
+    const head = document.createElement('div');
+    head.className = 'month-head';
+    head.innerHTML = `<span class="m-name">${mName}</span>` +
+      (mIndex === todayMonth ? `<span class="m-tag">This month</span>` : '');
+    tile.appendChild(head);
+
+    const bar = document.createElement('div');
+    bar.className = 'month-bar';
+    bar.style.background = MONTH_COLORS[mIndex];
+    tile.appendChild(bar);
+
+    const body = document.createElement('div');
+    body.className = 'month-body';
+
+    if(monthEntries.length === 0){
+      body.innerHTML = `<div class="m-empty">No birthdays yet</div>`;
+    }else{
+      monthEntries.forEach(e=>{
+        const row = document.createElement('div');
+        row.className = 'b-entry' + (mIndex === todayMonth && e.day === todayDay ? ' today-entry' : '');
+        row.innerHTML = `
+          <span class="b-name" title="${escapeHtml(e.name)}">${escapeHtml(e.name)}</span>
+          <span class="b-meta">${mName.slice(0,3)} ${e.day}</span>
+          <button class="b-del" title="Delete" data-id="${e.id}">✕</button>
+        `;
+        body.appendChild(row);
+      });
+    }
+    tile.appendChild(body);
+    grid.appendChild(tile);
+  });
+
+  grid.querySelectorAll('.b-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      entries = entries.filter(e => e.id !== id);
+      await saveEntries();
+      render();
+    });
+  });
+}
+
+function render(){
+  renderHero();
+  renderMonths();
+}
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const nameEl = document.getElementById('fName');
+  const dayEl = document.getElementById('fDay');
+  const noteEl = document.getElementById('fNote');
+  const msg = document.getElementById('formMsg');
+  msg.textContent = '';
+
+  const name = nameEl.value.trim();
+  const month = parseInt(monthSelect.value, 10);
+  const day = parseInt(dayEl.value, 10);
+  const note = noteEl.value.trim();
+
+  if(!name){
+    msg.textContent = 'Please enter a name.';
+    return;
+  }
+  if(!day || day < 1 || day > daysInMonth(month)){
+    msg.textContent = `Please enter a valid day for ${MONTH_NAMES[month]} (1–${daysInMonth(month)}).`;
+    return;
+  }
+
+  entries.push({ id: uid(), name, month, day, note });
+  await saveEntries();
+  render();
+
+  nameEl.value = '';
+  dayEl.value = '';
+  noteEl.value = '';
+  nameEl.focus();
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && document.activeElement &&
+     ['fName','fDay','fNote'].includes(document.activeElement.id)){
+    document.getElementById('addBtn').click();
+  }
+});
+
+/* ---------- EXCEL / CSV IMPORT ---------- */
+
+const MONTH_NAME_LOOKUP = {};
+MONTH_NAMES.forEach((m,i)=>{
+  MONTH_NAME_LOOKUP[m.toLowerCase()] = i;
+  MONTH_NAME_LOOKUP[m.slice(0,3).toLowerCase()] = i;
+});
+
+function findKey(rowKeys, patterns){
+  for(const k of rowKeys){
+    const lower = k.toLowerCase().trim();
+    for(const p of patterns){
+      if(p.test(lower)) return k;
+    }
+  }
+  return null;
+}
+
+function parseMonthValue(val){
+  if(val === undefined || val === null || val === '') return null;
+  if(typeof val === 'number'){
+    if(val >= 1 && val <= 12) return val - 1;
+    return null;
+  }
+  const str = String(val).trim().toLowerCase();
+  if(MONTH_NAME_LOOKUP.hasOwnProperty(str)) return MONTH_NAME_LOOKUP[str];
+  const num = parseInt(str, 10);
+  if(!isNaN(num) && num >= 1 && num <= 12) return num - 1;
+  return null;
+}
+
+function parseCombinedDate(val){
+  // Handles Excel date objects/serials and strings like "3/15", "March 15", "15-Mar", "2001-03-15"
+  if(val instanceof Date && !isNaN(val)){
+    return { month: val.getMonth(), day: val.getDate() };
+  }
+  if(typeof val === 'number'){
+    // Excel serial date fallback
+    const d = XLSX.SSF.parse_date_code(val);
+    if(d) return { month: d.m - 1, day: d.d };
+  }
+  const str = String(val).trim();
+  // try native Date parse first
+  const native = new Date(str);
+  if(!isNaN(native) && /[a-zA-Z]/.test(str)){
+    return { month: native.getMonth(), day: native.getDate() };
+  }
+  // try MM/DD or DD-MM style separators
+  const sep = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.]\d{2,4})?$/);
+  if(sep){
+    let a = parseInt(sep[1],10), b = parseInt(sep[2],10);
+    // assume month/day order (US-style) since header likely says "Date"/"Birthday"
+    if(a >= 1 && a <= 12 && b >= 1 && b <= 31) return { month: a-1, day: b };
+    if(b >= 1 && b <= 12 && a >= 1 && a <= 31) return { month: b-1, day: a };
+  }
+  return null;
+}
+
+async function handleImportFile(file){
+  const msg = document.getElementById('importMsg');
+  msg.className = 'form-msg';
+  msg.textContent = 'Reading file…';
+
+  try{
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type:'array', cellDates:true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+
+    if(rows.length === 0){
+      msg.textContent = 'That file has no rows to import.';
+      return;
+    }
+
+    const rowKeys = Object.keys(rows[0]);
+    const nameKey = findKey(rowKeys, [/name/]);
+    const monthKey = findKey(rowKeys, [/month/]);
+    const dayKey = findKey(rowKeys, [/^day$/, /day/]);
+    const dateKey = findKey(rowKeys, [/birthday/, /birth.?date/, /^dob$/, /^date$/]);
+    const noteKey = findKey(rowKeys, [/note/, /comment/, /relation/]);
+
+    if(!nameKey || (!monthKey && !dateKey)){
+      msg.textContent = 'Could not find Name and Month/Date columns. Check your headers and try again.';
+      return;
+    }
+
+    let added = 0, skipped = 0;
+    rows.forEach(row=>{
+      const name = String(row[nameKey] || '').trim();
+      if(!name){ skipped++; return; }
+
+      let month = null, day = null;
+      if(monthKey){
+        month = parseMonthValue(row[monthKey]);
+        day = dayKey ? parseInt(row[dayKey], 10) : null;
+      }
+      if((month === null || !day) && dateKey){
+        const parsed = parseCombinedDate(row[dateKey]);
+        if(parsed){ month = parsed.month; day = parsed.day; }
+      }
+
+      if(month === null || !day || day < 1 || day > daysInMonth(month)){
+        skipped++;
+        return;
+      }
+
+      const note = noteKey ? String(row[noteKey] || '').trim() : '';
+      entries.push({ id: uid(), name, month, day, note });
+      added++;
+    });
+
+    await saveEntries();
+    render();
+
+    msg.className = 'form-msg success';
+    msg.textContent = `Imported ${added} birthday${added===1?'':'s'}.` + (skipped ? ` Skipped ${skipped} row${skipped===1?'':'s'} with missing/invalid data.` : '');
+  }catch(err){
+    console.error(err);
+    msg.textContent = 'Could not read that file. Make sure it\'s a valid .xlsx, .xls, or .csv file.';
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  document.getElementById('fileName').textContent = file ? file.name : 'No file selected';
+  if(file) handleImportFile(file);
+});
+
+/* ---------- BROWSER NOTIFICATIONS ---------- */
+
+const NOTIFY_PREF_KEY = 'birthday-notify-enabled';
+const NOTIFY_LAST_KEY = 'birthday-notify-lastcheck';
+let notifyEnabled = false;
+
+function updateNotifyBtn(){
+  const btn = document.getElementById('notifyBtn');
+  const label = document.getElementById('notifyLabel');
+  if(notifyEnabled){
+    btn.classList.add('on');
+    label.textContent = 'Notifications on';
+  }else{
+    btn.classList.remove('on');
+    label.textContent = 'Enable notifications';
+  }
+}
+
+async function checkTodaysBirthdaysAndNotify(force){
+  if(!notifyEnabled || Notification.permission !== 'granted') return;
+
+  // avoid re-firing multiple times same day unless forced
+  let lastCheck = null;
+  try{
+    const res = await window.storage.get(NOTIFY_LAST_KEY, false);
+    lastCheck = res ? res.value : null;
+  }catch(e){ /* no record yet */ }
+
+  const todayKey = today.toISOString().slice(0,10);
+  if(lastCheck === todayKey && !force) return;
+
+  const todaysBirthdays = entries.filter(e => e.month === todayMonth && e.day === todayDay);
+  todaysBirthdays.forEach(e=>{
+    new Notification('🎂 Birthday today!', {
+      body: `${e.name}'s birthday is today${e.note ? ' — ' + e.note : ''}.`,
+      tag: 'birthday-' + e.id
+    });
+  });
+
+  try{ await window.storage.set(NOTIFY_LAST_KEY, todayKey, false); }catch(e){}
+}
+
+document.getElementById('notifyBtn').addEventListener('click', async ()=>{
+  if(!('Notification' in window)){
+    alert('This browser does not support notifications.');
+    return;
+  }
+  if(!notifyEnabled){
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){
+      alert('Notifications were not enabled. You can allow them in your browser settings and try again.');
+      return;
+    }
+    notifyEnabled = true;
+    try{ await window.storage.set(NOTIFY_PREF_KEY, 'true', false); }catch(e){}
+    updateNotifyBtn();
+    checkTodaysBirthdaysAndNotify(true);
+  }else{
+    notifyEnabled = false;
+    try{ await window.storage.set(NOTIFY_PREF_KEY, 'false', false); }catch(e){}
+    updateNotifyBtn();
+  }
+});
+
+async function initNotifyPref(){
+  try{
+    const res = await window.storage.get(NOTIFY_PREF_KEY, false);
+    notifyEnabled = res && res.value === 'true' && Notification.permission === 'granted';
+  }catch(e){
+    notifyEnabled = false;
+  }
+  updateNotifyBtn();
+  if(notifyEnabled) checkTodaysBirthdaysAndNotify(false);
+}
+
+// Re-check periodically in case the tab is left open across midnight
+setInterval(()=> checkTodaysBirthdaysAndNotify(false), 60 * 60 * 1000);
+
+loadEntries().then(initNotifyPref);
+</script>
+</body>
+</html>
